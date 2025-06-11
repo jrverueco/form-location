@@ -1,40 +1,86 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Get Location</title>
+    <title>My Location Map</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        #coordinates {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: white;
+            padding: 10px;
+            z-index: 1000;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+        }
+    </style>
 </head>
 <body>
-  <h2>Find Your Location</h2>
 
-  <form id="location-form">
-    <button type="submit">Get My Location</button>
-  </form>
+<div id="coordinates">Getting location...</div>
+<div id="map"></div>
 
-  <p><strong>Latitude:</strong> <span id="lat"></span></p>
-  <p><strong>Longitude:</strong> <span id="lon"></span></p>
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  <script>
-    const form = document.getElementById('location-form');
-    const latSpan = document.getElementById('lat');
-    const lonSpan = document.getElementById('lon');
+<script>
+    // Check if geolocation is supported
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(showPosition, showError);
+    } else {
+        document.getElementById("coordinates").innerHTML = "Geolocation is not supported by this browser.";
+    }
 
-    form.addEventListener('submit', function(e) {
-      e.preventDefault();
+    function showPosition(position) {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
 
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          function(position) {
-            latSpan.textContent = position.coords.latitude;
-            lonSpan.textContent = position.coords.longitude;
-          },
-          function(error) {
-            alert("Error getting location: " + error.message);
-          }
-        );
-      } else {
-        alert("Geolocation is not supported by your browser.");
-      }
-    });
-  </script>
+        document.getElementById("coordinates").innerHTML =
+            `Latitude: ${lat.toFixed(5)}<br>Longitude: ${lon.toFixed(5)}`;
+
+        // Initialize the map
+        const map = L.map('map').setView([lat, lon], 13);
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Add a marker
+        L.marker([lat, lon])
+            .addTo(map)
+            .bindPopup("You are here!")
+            .openPopup();
+    }
+
+    function showError(error) {
+        const coordDiv = document.getElementById("coordinates");
+        switch (error.code) {
+            case error.PERMISSION_DENIED:
+                coordDiv.innerHTML = "User denied the request for Geolocation.";
+                break;
+            case error.POSITION_UNAVAILABLE:
+                coordDiv.innerHTML = "Location information is unavailable.";
+                break;
+            case error.TIMEOUT:
+                coordDiv.innerHTML = "The request to get user location timed out.";
+                break;
+            case error.UNKNOWN_ERROR:
+                coordDiv.innerHTML = "An unknown error occurred.";
+                break;
+        }
+    }
+</script>
+
 </body>
 </html>
