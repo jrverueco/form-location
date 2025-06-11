@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Form with Geolocation</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <iframe width="640px" height="480px" src="https://forms.office.com/Pages/ResponsePage.aspx?id=ebchXRBV2EeQX-EVYCOjFsyzyJ3bbdNFlhEglcqyf-VUQkkxQUtMOU9XWURPTUk0M0dZWVBUREUyQS4u&embed=true" frameborder="0" marginwidth="0" marginheight="0" style="border: none; max-width:100%; max-height:100vh" allowfullscreen webkitallowfullscreen mozallowfullscreen msallowfullscreen> </iframe>
+
+<script>
+    const webhookUrl = "https://script.google.com/macros/s/AKfycby_jwrumDd8VksAFNy4ztI31meBmjQgZL_d0pYlh5A3xoSwysKZalupeM_gyklXtzwD/exec";
+
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(function(position) {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+
+        fetch(webhookUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            latitude: latitude,
+            longitude: longitude
+          })
+        })
+        .then(() => console.log("Location sent to Google Sheet"))
+        .catch(error => console.error("Error sending location:", error));
+
+      }, function(error) {
+        console.error("Geolocation error:", error.message);
+      });
+    } else {
+      console.error("Geolocation not supported.");
+    }
+  </script>
+
+
+
+</body>
+</html>
