@@ -1,86 +1,129 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>My Location Map</title>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <!-- Leaflet CSS -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-
-    <style>
-        #map {
-            height: 100vh;
-            width: 100%;
-        }
-        #coordinates {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: white;
-            padding: 10px;
-            z-index: 1000;
-            font-family: Arial, sans-serif;
-            font-size: 14px;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Store Information Collector</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 40px;
+      background-color: #f4f4f4;
+    }
+    form {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 6px;
+      max-width: 400px;
+      margin: auto;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:disabled {
+      background-color: #cccccc;
+    }
+    .error {
+      color: red;
+      font-size: 0.9em;
+      margin-bottom: 10px;
+      text-align: center;
+    }
+  </style>
 </head>
 <body>
 
-<div id="coordinates">Getting location...</div>
-<div id="map"></div>
+  <h2 style="text-align:center;">Store Information Collector</h2>
+  <form id="storeForm">
+    <div class="error" id="errorMsg"></div>
 
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <label for="rcCode">RC Code:</label>
+    <input type="text" id="rcCode" name="rcCode" required>
+
+    <label for="siteCode">Site Code:</label>
+    <input type="text" id="siteCode" name="siteCode" required>
+
+    <label for="storeName">Store Name:</label>
+    <input type="text" id="storeName" name="storeName" required>
+
+    <label for="longitude">Longitude:</label>
+    <input type="number" id="longitude" name="longitude" step="any" required readonly>
+
+    <label for="latitude">Latitude:</label>
+    <input type="number" id="latitude" name="latitude" step="any" required readonly>
+
+    <button type="submit" id="submitBtn" disabled>Submit</button>
+  </form>
 
 <script>
-    // Check if geolocation is supported
-    if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(showPosition, showError);
-    } else {
-        document.getElementById("coordinates").innerHTML = "Geolocation is not supported by this browser.";
-    }
+  const longitudeInput = document.getElementById("longitude");
+  const latitudeInput = document.getElementById("latitude");
+  const errorMsg = document.getElementById("errorMsg");
+  const submitBtn = document.getElementById("submitBtn");
 
-    function showPosition(position) {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
+  const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxI6pA16oO1aGQSdPEJ9e-nHqE4qibz_isFsOviwqBUqhrlDkltwcnnWhsRczrARyPpDA/exec"; // Replace this with your actual URL
 
-        document.getElementById("coordinates").innerHTML =
-            `Latitude: ${lat.toFixed(5)}<br>Longitude: ${lon.toFixed(5)}`;
+  if ("geolocation" in navigator) {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        latitudeInput.value = latitude.toFixed(6);
+        longitudeInput.value = longitude.toFixed(6);
+        submitBtn.disabled = false;
+      },
+      (error) => {
+        errorMsg.textContent = "Error: Unable to retrieve location.";
+        submitBtn.disabled = true;
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  } else {
+    errorMsg.textContent = "Geolocation is not supported by this browser.";
+    submitBtn.disabled = true;
+  }
 
-        // Initialize the map
-        const map = L.map('map').setView([lat, lon], 13);
+  document.getElementById('storeForm').addEventListener('submit', function(event) {
+    event.preventDefault();
 
-        // Add OpenStreetMap tiles
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors'
-        }).addTo(map);
+    const data = {
+      rcCode: document.getElementById('rcCode').value,
+      siteCode: document.getElementById('siteCode').value,
+      storeName: document.getElementById('storeName').value,
+      longitude: longitudeInput.value,
+      latitude: latitudeInput.value,
+    };
 
-        // Add a marker
-        L.marker([lat, lon])
-            .addTo(map)
-            .bindPopup("You are here!")
-            .openPopup();
-    }
+    fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors", // Prevents CORS errors but disables response reading
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
 
-    function showError(error) {
-        const coordDiv = document.getElementById("coordinates");
-        switch (error.code) {
-            case error.PERMISSION_DENIED:
-                coordDiv.innerHTML = "User denied the request for Geolocation.";
-                break;
-            case error.POSITION_UNAVAILABLE:
-                coordDiv.innerHTML = "Location information is unavailable.";
-                break;
-            case error.TIMEOUT:
-                coordDiv.innerHTML = "The request to get user location timed out.";
-                break;
-            case error.UNKNOWN_ERROR:
-                coordDiv.innerHTML = "An unknown error occurred.";
-                break;
-        }
-    }
+    alert("Form submitted! Data sent to Google Sheet.");
+    this.reset();
+    submitBtn.disabled = true; // Re-disable until location is reacquired
+  });
 </script>
+
 
 </body>
 </html>
